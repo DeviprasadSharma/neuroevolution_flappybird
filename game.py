@@ -319,7 +319,8 @@ class Game():
         self.generation = 0
         # set pipes
         self.pipes = deque()
-        self.record = {'generation':[],'highest_score':[]}
+        self.record = []
+        self.logpath = 'scores.txt'
 
     def start(self):
         self.score = 0
@@ -398,8 +399,12 @@ class Game():
                     self.ai.network_score(self.score,self.gen[i])
                     if self.all_dead:
                         self.frame_clock = -1
-                        self.record['generation'].append(self.generation)
-                        self.record['highest_score'].append(self.score)
+                        self.record.append(self.score)
+                        if self.generation % 500 == 0:
+                            with open(self.logpath,'a') as f:
+                                for sc in self.record:
+                                    f.write(str(sc)+',')
+                            self.record = []
                         self.start()
         # print score
         score_surface = self.score_font.render('score:{}'.format(self.score), True, (255, 255, 255))
@@ -430,19 +435,17 @@ class Game():
             self.update(paused)
         print('Over')
         pygame.quit()
-
-
-
-
-
+        with open('lastgeneration.txt','w') as f:
+            for x in self.ai.gene.generations[-1].individuals:
+                f.write(str(x.netweights))
 
 def main():
     game = Game()
     game.run()
-    print('generation')
-    print(game.record['generation'])
+    #print('generation')
+    #print(game.record['generation'])
     print('highest_score')
-    print(game.record['highest_score'])
+    print(game.record)
     #game.debug()
 
 
