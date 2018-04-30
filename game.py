@@ -409,15 +409,16 @@ class Game():
                         self.record.append(self.score)
                         if self.score > self.maxscore:
                             self.maxscore = self.score
-                        if self.generation % 500 == 0:
+                        if self.generation % 100 == 0: #output every 100 generations
                             with open(self.logpath,'a') as f:
                                 for sc in self.record:
                                     f.write(str(sc)+',')
                             self.record = []
+                        self.ai.output()
                         self.start()
         # print score
         score_surface = self.score_font.render('score:{0:.1f}'.format(self.score), True, (255, 255, 255))
-        maxscore_surface = self.score_font.render('maxs:{0:.1f}'.format(self.maxscore), True, (255, 255, 255))
+        maxscore_surface = self.score_font.render('max:{0:.1f}'.format(self.maxscore), True, (255, 255, 255))
         generation_surface = self.score_font.render('generation:{}'.format(self.generation), True, (255, 255, 255))
         alive_surface = self.score_font.render('alive:{}/50'.format(self.alives), True, (255, 255, 255))
         score_x = WIN_WIDTH/2 - score_surface.get_width()/2
@@ -532,8 +533,8 @@ def main():
     game.run()
     #print('generation')
     #print(game.record['generation'])
-    #print('highest_score')
-    #print(game.record)
+    print('highest_score')
+    print(game.record)
     #game.debug()
 
 

@@ -94,6 +94,11 @@ class Generation():
 			if max_n > len(self.individuals):
 				max_n = 0
 
+	def output(self,path='gene.txt'):
+		with open(path,'a') as f:
+            for x in self.individuals:
+                f.write(str(x.score)+',')
+
 class Generations():
 	def __init__(self):
 		self.generations = []
@@ -119,6 +124,11 @@ class Generations():
 		if len(self.generations) == 0:
 			return False
 		return self.generations[-1].add(indi)
+
+	def output(self):
+		'''wirte the last generation into file'''
+		self.generations[-1].output()
+
 
 
 
@@ -149,6 +159,9 @@ class NeuroEvolution():
 
 	def network_score(self,score,nn):
 		self.gene.add_indi(individual(score,nn.weights))
+
+	def output(self):
+		self.gene.output()
 
 
 
