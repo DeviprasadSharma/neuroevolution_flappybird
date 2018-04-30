@@ -11,7 +11,7 @@ import pygame
 from pygame.locals import *
 import neuro_evolution
 
-FPS = 50
+FPS = 60
 ANIMATION_SPEED = 0.18  # pixels per millisecond
 WIN_WIDTH = 284 * 2     # BG image size: 284x512 px; tiled twice
 WIN_HEIGHT = 512
@@ -47,6 +47,7 @@ class Bird(pygame.sprite.Sprite):
     SINK_SPEED = 0.18
     CLIMB_SPEED = 0.3
     CLIMB_DURATION = 333.3
+    JUMP = -6
 
     def __init__(self, x, y, msec_to_climb, images):
         """Initialise a new Bird instance.
@@ -70,8 +71,12 @@ class Bird(pygame.sprite.Sprite):
         self._mask_wingup = pygame.mask.from_surface(self._img_wingup)
         self._mask_wingdown = pygame.mask.from_surface(self._img_wingdown)
         self.alive = True
+        self.gravity = 0
 
-    def update(self, delta_frames=1):
+    def flap(self):
+        self.gravity = Bird.JUMP
+
+    def update(self):
         """Update the bird's position.
 
         This function uses the cosine function to achieve a smooth climb:
@@ -86,13 +91,8 @@ class Bird(pygame.sprite.Sprite):
         delta_frames: The number of frames elapsed since this method was
             last called.
         """
-        if self.msec_to_climb > 0:
-            frac_climb_done = 1 - self.msec_to_climb/Bird.CLIMB_DURATION
-            self.y -= (Bird.CLIMB_SPEED * frames_to_msec(delta_frames) *
-                       (1 - math.cos(frac_climb_done * math.pi)))
-            self.msec_to_climb -= frames_to_msec(delta_frames)
-        else:
-            self.y += Bird.SINK_SPEED * frames_to_msec(delta_frames)
+        self.gravity += Bird.CLIMB_SPEED
+        self.y += self.gravity
 
     @property
     def image(self):
@@ -321,6 +321,7 @@ class Game():
         self.pipes = deque()
         self.record = []
         self.logpath = 'scores.txt'
+        self.maxscore = 0
 
     def start(self):
         self.score = 0
@@ -336,21 +337,27 @@ class Game():
         self.generation += 1
         self.alives = len(self.birds)
 
-    def get_input(self,bird,size = 5):
+    def get_input(self,bird,size = 3):
         input = np.zeros(size)
         input[0] = bird.y
         # only the first pipe are considered
-        n = (size - 2)/3 - 1
-        for i,pp in enumerate(self.pipes):
-            input[i*3+1] = pp.x
-            input[i*3+2] = pp.bottom_height_px
-            input[i*3+3] = pp.top_height_px
-            if i == n:
+        #n = (size - 1)/3 - 1
+        #for i,pp in enumerate(self.pipes):
+        #    input[i*3+1] = pp.x
+        #    input[i*3+2] = pp.bottom_height_px / WIN_HEIGHT
+        #    input[i*3+3] = pp.top_height_px / WIN_HEIGHT
+        #    if i == n:
+        #        break
+        for pp in self.pipes:
+            if pp.x + PipePair.WIDTH > bird.x:
+                input[1] = pp.top_height_px
+                input[2] = pp.x + PipePair.WIDTH
                 break
-        if len(self.pipes) > 0 and bird.y < self.pipes[0].bottom_height_px:
-            input[-1] = -1.0
-        else:
-            input[-1] = 1.0
+        #if len(self.pipes) > 0 and bird.y < self.pipes[0].bottom_height_px:
+        #    input[-1] = -1.0
+        #else:
+        #    input[-1] = 1.0
+        #input[-1] = -1.0
         return input
 
     @property
@@ -380,15 +387,15 @@ class Game():
             if p.x + PipePair.WIDTH < Game.BIRD_X and not p.score_counted:
                 self.score += 1
                 p.score_counted = True
+        self.score += 0.5
         # generate bird
         for i,bird in enumerate(self.birds):
             if bird.alive:
                 inputs = self.get_input(bird)
                 res = self.gen[i].feedforward(inputs)
-                if res[0] < 0.45: # not do anythind
-                    pass
-                elif res[0] > 0.55: #fly
-                    bird.msec_to_climb = Bird.CLIMB_DURATION
+                #print(res)
+                if res[0] > 0.5: # flap
+                    bird.flap()
                 bird.update()
                 self.screen.blit(bird.image, bird.rect)
 
@@ -400,6 +407,8 @@ class Game():
                     if self.all_dead:
                         self.frame_clock = -1
                         self.record.append(self.score)
+                        if self.score > self.maxscore:
+                            self.maxscore = self.score
                         if self.generation % 500 == 0:
                             with open(self.logpath,'a') as f:
                                 for sc in self.record:
@@ -407,13 +416,15 @@ class Game():
                             self.record = []
                         self.start()
         # print score
-        score_surface = self.score_font.render('score:{}'.format(self.score), True, (255, 255, 255))
+        score_surface = self.score_font.render('score:{0:.1f}'.format(self.score), True, (255, 255, 255))
+        maxscore_surface = self.score_font.render('maxs:{0:.1f}'.format(self.maxscore), True, (255, 255, 255))
         generation_surface = self.score_font.render('generation:{}'.format(self.generation), True, (255, 255, 255))
         alive_surface = self.score_font.render('alive:{}/50'.format(self.alives), True, (255, 255, 255))
         score_x = WIN_WIDTH/2 - score_surface.get_width()/2
-        self.screen.blit(score_surface, (score_x, PipePair.PIECE_HEIGHT))
-        self.screen.blit(generation_surface, (score_x, PipePair.PIECE_HEIGHT+score_surface.get_height()))
-        self.screen.blit(alive_surface, (score_x, PipePair.PIECE_HEIGHT+score_surface.get_height()*2))
+        self.screen.blit(maxscore_surface, (score_x, 0))
+        self.screen.blit(score_surface, (score_x, maxscore_surface.get_height()))
+        self.screen.blit(generation_surface, (score_x, maxscore_surface.get_height()*2))
+        self.screen.blit(alive_surface, (score_x, score_surface.get_height()*3))
         pygame.display.flip()
         self.frame_clock += 1
 
@@ -439,13 +450,90 @@ class Game():
             for x in self.ai.gene.generations[-1].individuals:
                 f.write(str(x.netweights))
 
+    def debug(self):
+        """The application's entry point.
+
+    If someone executes this module (instead of importing it, for
+    example), this function is called.
+    """
+
+        pygame.init()
+
+
+    # the bird stays in the same x position, so bird.x is a constant
+    # center bird on screen
+        bird = Bird(50, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
+                (self.images['bird-wingup'], self.images['bird-wingdown']))
+
+        self.pipes = deque()
+
+        frame_clock = 0  # this counter is only incremented if the game isn't paused
+        self.score = 0
+        done = paused = False
+        while not done:
+            self.clock.tick(FPS)
+
+        # Handle this 'manually'.  If we used pygame.time.set_timer(),
+        # pipe addition would be messed up when paused.
+            if not (paused or frame_clock % msec_to_frames(PipePair.ADD_INTERVAL)):
+                pp = PipePair(self.images['pipe-end'], self.images['pipe-body'])
+                self.pipes.append(pp)
+
+            for e in pygame.event.get():
+                if e.type == QUIT or (e.type == KEYUP and e.key == K_ESCAPE):
+                    done = True
+                    break
+                elif e.type == KEYUP and e.key in (K_PAUSE, K_p):
+                    paused = not paused
+                elif e.type == MOUSEBUTTONUP or (e.type == KEYUP and
+                    e.key in (K_UP, K_RETURN, K_SPACE)):
+                    bird.flap()
+
+            if paused:
+                continue  # don't draw anything
+
+        # check for collisions
+            pipe_collision = any(p.collides_with(bird) for p in self.pipes)
+            if pipe_collision or 0 >= bird.y or bird.y >= WIN_HEIGHT - Bird.HEIGHT:
+                done = True
+
+            for x in (0, WIN_WIDTH / 2):
+                self.screen.blit(self.images['background'], (x, 0))
+
+            while self.pipes and not self.pipes[0].visible:
+                self.pipes.popleft()
+
+            for p in self.pipes:
+                p.update()
+                self.screen.blit(p.image, p.rect)
+
+            bird.update()
+            print(bird.msec_to_climb)
+            self.screen.blit(bird.image, bird.rect)
+
+        # update and display score
+            for p in self.pipes:
+                if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
+                    self.score += 1
+                    p.score_counted = True
+
+            score_surface = self.score_font.render(str(self.score), True, (255, 255, 255))
+            score_x = WIN_WIDTH/2 - score_surface.get_width()/2
+            self.screen.blit(score_surface, (score_x, PipePair.PIECE_HEIGHT))
+
+            pygame.display.flip()
+            frame_clock += 1
+        print('Game over! Score: %i' % score)
+        pygame.quit()
+
+
 def main():
     game = Game()
     game.run()
     #print('generation')
     #print(game.record['generation'])
-    print('highest_score')
-    print(game.record)
+    #print('highest_score')
+    #print(game.record)
     #game.debug()
 
 

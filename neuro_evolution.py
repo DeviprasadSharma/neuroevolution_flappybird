@@ -3,7 +3,7 @@ import numpy as np
 from copy import deepcopy
 
 POPULATION = 50
-SIZE = [5,25,2]
+SIZE = [3,9,1]
 
 def sigmoid(z):
 	f = lambda x: 0. if x < -500 else 1.0 if x >500 else 1.0/(1.0 + math.exp(-x))
@@ -13,7 +13,6 @@ def sigmoid(z):
 		return np.array(list(map(f,z)))
 
 class NeuroNetwork():
-	SIZE = [5,25,2]
 	def __init__(self,size = SIZE):
 		self.num_layers = len(size)
 		self.size = size
@@ -38,7 +37,7 @@ class individual():
 class Generation():
 	def __init__(self):
 		self.individuals = []
-		self.mutation_rate = 0.05
+		self.mutation_rate = 0.1
 		self.elitism = 0.2
 		self.population = POPULATION
 		self.random_behavior = 0.1
@@ -64,7 +63,7 @@ class Generation():
 					childweights[i].flat[j] = ind2.netweights[i].flat[j]
 				# mutation
 				if np.random.random()<self.mutation_rate:
-					childweights[i].flat[j] += np.random.random() * 4 - 2
+					childweights[i].flat[j] += np.random.random() - 0.5
 		return childweights
 
 	def generate_next(self):
@@ -78,14 +77,22 @@ class Generation():
 				nextgen.append([np.random.randn(y,x)
 						for x,y in zip(SIZE[:-1],SIZE[1:])])
 		# breed
-		p = np.array([x.score for x in self.individuals])
-		p = p - np.min(p)
-		p = p/sum(p)
-		while len(nextgen) < self.population:
-			i,j = np.random.choice(range(len(self.individuals)),2,replace = False,p=p)
-			child = self.breed(self.individuals[i],self.individuals[j])
-			nextgen.append(child)
-		return nextgen
+		#p = np.array([x.score for x in self.individuals])
+		#p = p / sum(p) if sum(p)!= 0 else None
+		#while len(nextgen) < self.population:
+		#	i,j = np.random.choice(range(len(self.individuals)),2,replace = False,p=p)
+		#	child = self.breed(self.individuals[i],self.individuals[j])
+		#	nextgen.append(child)
+		max_n = 0
+		while True:
+			for i in range(max_n):
+				child = self.breed(self.individuals[i],self.individuals[max_n])
+				nextgen.append(child)
+				if len(nextgen) == self.population:
+					return nextgen
+			max_n += 1
+			if max_n > len(self.individuals):
+				max_n = 0
 
 class Generations():
 	def __init__(self):
