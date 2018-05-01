@@ -414,7 +414,7 @@ class Game():
                                 for sc in self.record:
                                     f.write(str(sc)+',')
                             self.record = []
-                        self.ai.output()
+                        #self.ai.output() #record the score all ais
                         self.start()
         # print score
         score_surface = self.score_font.render('score:{0:.1f}'.format(self.score), True, (255, 255, 255))
