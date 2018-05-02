@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from copy import deepcopy
+import re
 
 POPULATION = 50
 SIZE = [3,9,1]
@@ -94,14 +95,44 @@ class Generation():
 			if max_n > len(self.individuals):
 				max_n = 0
 
+	def output(self,path='gene.txt'):
+		with open(path,'a') as f:
+			for x in self.individuals:
+				f.write(str(x.score)+',')
+
 class Generations():
 	def __init__(self):
 		self.generations = []
 
+	@staticmethod
+	def readlog(path):
+		data = []
+		try:
+			with open(path,'r') as f:
+				w = f.read()
+			p1 = r'\[array\(\[([^\)]*)\]\)'
+			a = re.findall(p1,w)
+			p2 = r', array\(\[([^\)]*)\]\)'
+			b = re.findall(p2,w)
+			p3 = r'\[([^\]]*)\]'
+			tofloat = lambda x: list(map(float,x.split(',')))
+			pipeline = lambda x: list(map(tofloat,re.findall(p3,x)))
+			a = list(map(pipeline,a))
+			b = list(map(pipeline,b))
+			for i,j in zip(a,b):
+				data.append([np.array(i),np.array(j)])
+			return data
+		except IOError:
+			return data
+
 	def first_generation(self):
-		outweight = []
+		outweight = Generations.readlog('lastgeneration.txt')
 		out = []
-		for i in range(POPULATION):
+		for w in outweight:
+			nn = NeuroNetwork()
+			nn.weights = w
+			out.append(nn)
+		while len(out) < POPULATION:
 			nn = NeuroNetwork()
 			out.append(nn)
 			outweight.append(nn.weights)
@@ -119,6 +150,11 @@ class Generations():
 		if len(self.generations) == 0:
 			return False
 		return self.generations[-1].add(indi)
+
+	def output(self):
+		'''wirte the last generation into file'''
+		self.generations[-1].output()
+
 
 
 
@@ -149,6 +185,9 @@ class NeuroEvolution():
 
 	def network_score(self,score,nn):
 		self.gene.add_indi(individual(score,nn.weights))
+
+	def output(self):
+		self.gene.output()
 
 
 
