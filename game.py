@@ -452,14 +452,9 @@ class Game():
                 f.write(str(x.netweights))
 
     def debug(self):
-        """The application's entry point.
-
-    If someone executes this module (instead of importing it, for
-    example), this function is called.
-    """
+        """ If you want to simply play it by yourself"""
 
         pygame.init()
-
 
     # the bird stays in the same x position, so bird.x is a constant
     # center bird on screen
@@ -533,8 +528,8 @@ def main():
     game.run()
     #print('generation')
     #print(game.record['generation'])
-    print('highest_score')
-    print(game.record)
+    #print('highest_score')
+    #print(game.record)
     #game.debug()
 
 

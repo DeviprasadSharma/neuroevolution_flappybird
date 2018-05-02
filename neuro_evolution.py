@@ -128,7 +128,7 @@ class Generations():
 	def first_generation(self):
 		outweight = Generations.readlog('lastgeneration.txt')
 		out = []
-		for w in outweight:
+		for w in outweight[:POPULATION]:
 			nn = NeuroNetwork()
 			nn.weights = w
 			out.append(nn)
